@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quản Lý Đơn Hàng</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        .container {
+            padding: 20px;
+            max-width: 1000px;
+            margin: auto;
+            background-color: #222;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        .table {
+            margin-bottom: 20px;
+        }
+        .table-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            background-color: #444;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .table-header:hover {
+            background-color: #555;
+        }
+        .table-content {
+            padding: 10px;
+            border: 1px solid #555;
+            border-radius: 5px;
+            margin-top: 10px;
+            display: none;
+        }
+        .order-summary {
+            margin-bottom: 20px;
+        }
+        .order-summary div {
+            margin-bottom: 10px;
+            padding: 10px;
+            border-bottom: 1px solid #555;
+        }
+        .order-total {
+            font-weight: bold;
+            text-align: right;
+            margin-top: 20px;
+        }
+        .clear-history, .print-invoice {
+            background-color: #f44336;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .clear-history:hover, .print-invoice:hover {
+            background-color: #d32f2f;
+        }
+        .revenue {
+            margin-top: 20px;
+            text-align: center;
+        }
+        .revenue-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+        .revenue-btn:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Quản Lý Đơn Hàng
+    </header>
+    <div class="container">
+        <div id="tables"></div>
+        <div class="revenue">
+            <button class="revenue-btn" onclick="viewDailyRevenue()">Xem Doanh Thu Hôm Nay</button>
+            <button class="revenue-btn" onclick="viewMonthlyRevenue()">Xem Doanh Thu Tháng Này</button>
+        </div>
+    </div>
+    <!-- Thêm Firebase SDK -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+      import { getFirestore, collection, getDocs, query, where, orderBy, deleteDoc, doc } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBCbY70JGVZ331nnSw_uCQqD95prossTA8",
+        authDomain: "restaurant-ordering-system97.firebaseapp.com",
+        projectId: "restaurant-ordering-system97",
+        storageBucket: "restaurant-ordering-system97.appspot.com",
+        messagingSenderId: "1081679808345",
+        appId: "1:1081679808345:web:a287ef54c454211e91d8ac",
+        measurementId: "G-1GDHDMJHYM"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      const tableCount = 10;
+
+      async function loadOrders() {
+          const tablesDiv = document.getElementById('tables');
+          tablesDiv.innerHTML = '';
+
+          for (let i = 1; i <= tableCount; i++) {
+              const tableDiv = document.createElement('div');
+              tableDiv.className = 'table';
+
+              const headerDiv = document.createElement('div');
+              headerDiv.className = 'table-header';
+              headerDiv.innerHTML = `
+                  <span>Bàn ${i}</span>
+                  <button class="clear-history" onclick="clearHistory(${i})">Xóa Lịch Sử</button>
+              `;
+              headerDiv.onclick = () => {
+                  const contentDiv = headerDiv.nextElementSibling;
+                  contentDiv.style.display = contentDiv.style.display === 'none' ? 'block' : 'none';
+              };
+
+              const contentDiv = document.createElement('div');
+              contentDiv.className = 'table-content';
+
+              const q = query(collection(db, 'orders'), where('table', '==', i), orderBy('time', 'desc'));
+              const querySnapshot = await getDocs(q);
+              const historyDetails = querySnapshot.docs.map((doc, index) => {
+                  const data = doc.data();
+                  return `
+                      <div>
+                          <strong>Đơn hàng ${index + 1} - ${data.time.toDate().toLocaleString()}</strong>
+                          <div>${data.order.map(item => `${item.item} (${item.quantity}): ${item.price * item.quantity} VND`).join('<br>')}</div>
+                          <div><strong>Tổng: ${data.total} VND</strong></div>
+                          <button class="print-invoice" onclick="printInvoice(${i}, '${doc.id}')">In Hóa Đơn</button>
+                      </div>
+                      <hr>
+                  `;
+              }).join('');
+              contentDiv.innerHTML = historyDetails || '<div>Không có lịch sử đặt món</div>';
+
+              tableDiv.appendChild(headerDiv);
+              tableDiv.appendChild(contentDiv);
+              tablesDiv.appendChild(tableDiv);
+          }
+      }
+
+      async function clearHistory(tableNumber) {
+          const q = query(collection(db, 'orders'), where('table', '==', tableNumber));
+          const querySnapshot = await getDocs(q);
+          querySnapshot.forEach(async (doc) => {
+              await deleteDoc(doc.ref);
+          });
+          loadOrders();
+      }
+
+      async function viewDailyRevenue() {
+          const today = new Date().toLocaleDateString();
+          let dailyRevenue = 0;
+
+          for (let i = 1; i <= tableCount; i++) {
+              const q = query(collection(db, 'orders'), where('table', '==', i), orderBy('time', 'desc'));
+              const querySnapshot = await getDocs(q);
+              querySnapshot.forEach(doc => {
+                  const data = doc.data();
+                  if (data.time.toDate().toLocaleDateString() === today) {
+                      dailyRevenue += data.total;
+                  }
+              });
+          }
+
+          alert(`Doanh thu hôm nay: ${dailyRevenue} VND`);
+      }
+
+      async function viewMonthlyRevenue() {
+          const currentMonth = new Date().getMonth();
+          let monthlyRevenue = 0;
+
+          for (let i = 1; i <= tableCount; i++) {
+              const q = query(collection(db, 'orders'), where('table', '==', i), orderBy('time', 'desc'));
+              const querySnapshot = await getDocs(q);
+              querySnapshot.forEach(doc => {
+                  const data = doc.data();
+                  if (data.time.toDate().getMonth() === currentMonth) {
+                      monthlyRevenue += data.total;
+                  }
+              });
+          }
+
+          alert(`Doanh thu tháng này: ${monthlyRevenue} VND`);
+      }
+
+      async function printInvoice(tableNumber, docId) {
+          const docRef = doc(db, 'orders', docId);
+          const docSnap = await getDoc(docRef);
+
+          if (docSnap.exists()) {
+              const data = docSnap.data();
+              let invoiceDetails = `
+                  <div>
+                      <strong>Hóa Đơn Bàn ${tableNumber} - Đơn hàng ${docSnap.id} - ${data.time.toDate().toLocaleString()}</strong>
+                      <div>${data.order.map(item => `${item.item} (${item.quantity}): ${item.price * item.quantity} VND`).join('<br>')}</div>
+                      <div><strong>Tổng: ${data.total} VND</strong></div>
+                  </div>
+              `;
+              const invoiceWindow = window.open("", "Hóa Đơn", "width=600,height=400");
+              invoiceWindow.document.write(`<html><head><title>Hóa Đơn</title></head><body>${invoiceDetails}</body></html>`);
+              invoiceWindow.print();
+          } else {
+              console.log("No such document!");
+          }
+      }
+
+      window.onload = loadOrders;
+    </script>
+</body>
+</html>

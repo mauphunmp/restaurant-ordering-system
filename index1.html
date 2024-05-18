@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Order Đồ Ăn - Bàn 1</title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #000;
+            color: #fff;
+        }
+        header {
+            background-color: #333;
+            color: white;
+            padding: 15px 0;
+            text-align: center;
+            font-size: 1.5em;
+        }
+        .container {
+            padding: 20px;
+            max-width: 800px;
+            margin: auto;
+            background-color: #222;
+            border-radius: 5px;
+            box-shadow: 0 0 10px rgba(255, 255, 255, 0.1);
+        }
+        .menu-item, .cart-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            border-bottom: 1px solid #555;
+        }
+        .menu-item:last-child, .cart-item:last-child {
+            border-bottom: none;
+        }
+        .menu-item button, .cart-item button {
+            background-color: #ff5722;
+            color: white;
+            border: none;
+            padding: 5px 10px;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+        .menu-item button:hover, .cart-item button:hover {
+            background-color: #e64a19;
+        }
+        .cart-total, .actions {
+            text-align: right;
+            margin-top: 20px;
+        }
+        .order-btn {
+            background-color: #4caf50;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            text-align: center;
+            display: block;
+            width: 100%;
+            margin-top: 10px;
+        }
+        .order-btn:hover {
+            background-color: #388e3c;
+        }
+        .quantity-input {
+            width: 50px;
+            text-align: center;
+        }
+        .actions button {
+            background-color: #ff5722;
+            color: white;
+            border: none;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-left: 10px;
+        }
+        .actions button:hover {
+            background-color: #e64a19;
+        }
+        .menu-item img {
+            width: 50px;
+            height: 50px;
+            margin-right: 10px;
+            border-radius: 5px;
+        }
+        .history {
+            margin-top: 20px;
+            text-align: left;
+        }
+        .history-btn {
+            background-color: #2196f3;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            display: block;
+            width: 100%;
+        }
+        .history-btn:hover {
+            background-color: #1976d2;
+        }
+    </style>
+</head>
+<body>
+    <header>
+        Order Đồ Ăn - Bàn 1
+    </header>
+    <div class="container">
+        <p>Xin chào quý khách! Cảm ơn bạn đã sử dụng dịch vụ của Quán Ăn: Hương vị Việt Nam. Chúc quý khách có trải nghiệm tuyệt vời!</p>
+        <section class="menu">
+            <h2>Thực Đơn</h2>
+            <div class="menu-item">
+                <img src="https://example.com/pho.jpg" alt="Phở Bò">
+                <span>Phở Bò</span>
+                <span>50,000 VND</span>
+                <input type="number" class="quantity-input" id="quantity-pho" value="1" min="1">
+                <button onclick="addToCart('Phở Bò', 50000, document.getElementById('quantity-pho').value)">Thêm vào giỏ</button>
+            </div>
+            <div class="menu-item">
+                <img src="https://example.com/banhmi.jpg" alt="Bánh Mì">
+                <span>Bánh Mì</span>
+                <span>20,000 VND</span>
+                <input type="number" class="quantity-input" id="quantity-banhmi" value="1" min="1">
+                <button onclick="addToCart('Bánh Mì', 20000, document.getElementById('quantity-banhmi').value)">Thêm vào giỏ</button>
+            </div>
+            <div class="menu-item">
+                <img src="https://example.com/trasua.jpg" alt="Trà Sữa">
+                <span>Trà Sữa</span>
+                <span>30,000 VND</span>
+                <input type="number" class="quantity-input" id="quantity-trasua" value="1" min="1">
+                <button onclick="addToCart('Trà Sữa', 30000, document.getElementById('quantity-trasua').value)">Thêm vào giỏ</button>
+            </div>
+        </section>
+        <section class="cart">
+            <h2>Giỏ Hàng</h2>
+            <div id="cart-items"></div>
+            <div class="cart-total">Tổng: <span id="cart-total">0</span> VND</div>
+            <button class="order-btn" onclick="checkout()">Đặt Hàng</button>
+        </section>
+        <div class="actions">
+            <button onclick="callService()">Gọi Nhân Viên</button>
+            <button onclick="callPayment()">Gọi Thanh Toán</button>
+            <button class="history-btn" onclick="viewHistory()">Xem Lịch Sử Đặt Món</button>
+        </div>
+    </div>
+    <!-- Thêm Firebase SDK -->
+    <script type="module">
+      // Import the functions you need from the SDKs you need
+      import { initializeApp } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-app.js";
+      import { getFirestore, collection, addDoc, query, where, getDocs, orderBy } from "https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore.js";
+
+      // Your web app's Firebase configuration
+      const firebaseConfig = {
+        apiKey: "AIzaSyBCbY70JGVZ331nnSw_uCQqD95prossTA8",
+        authDomain: "restaurant-ordering-system97.firebaseapp.com",
+        projectId: "restaurant-ordering-system97",
+        storageBucket: "restaurant-ordering-system97.appspot.com",
+        messagingSenderId: "1081679808345",
+        appId: "1:1081679808345:web:a287ef54c454211e91d8ac",
+        measurementId: "G-1GDHDMJHYM"
+      };
+
+      // Initialize Firebase
+      const app = initializeApp(firebaseConfig);
+      const db = getFirestore(app);
+
+      let cart = [];
+
+      function addToCart(item, price, quantity) {
+          quantity = parseInt(quantity);
+          const cartItem = { item, price, quantity };
+          const existingItemIndex = cart.findIndex(cartItem => cartItem.item === item);
+          if (existingItemIndex > -1) {
+              cart[existingItemIndex].quantity += quantity;
+          } else {
+              cart.push(cartItem);
+          }
+          updateCart();
+      }
+
+      function updateCart() {
+          const cartItemsDiv = document.getElementById('cart-items');
+          cartItemsDiv.innerHTML = '';
+          let total = 0;
+
+          cart.forEach((cartItem, index) => {
+              const cartItemDiv = document.createElement('div');
+              cartItemDiv.className = 'cart-item';
+              const itemTotal = cartItem.price * cartItem.quantity;
+              cartItemDiv.innerHTML = `
+                  <span>${cartItem.item} (${cartItem.quantity})</span>
+                  <span>${itemTotal} VND</span>
+                  <button onclick="removeFromCart(${index})">Xóa</button>
+              `;
+              cartItemsDiv.appendChild(cartItemDiv);
+              total += itemTotal;
+          });
+
+          document.getElementById('cart-total').innerText = total;
+      }
+
+      function removeFromCart(index) {
+          cart.splice(index, 1);
+          updateCart();
+      }
+
+      async function checkout() {
+          if (cart.length === 0) {
+              alert('Giỏ hàng của bạn đang trống!');
+              return;
+          }
+
+          const total = cart.reduce((sum, cartItem) => sum + (cartItem.price * cartItem.quantity), 0);
+
+          // Lưu chi tiết đơn hàng vào Firestore
+          try {
+              await addDoc(collection(db, 'orders'), {
+                  table: 1,
+                  order: cart,
+                  total: total,
+                  time: new Date()
+              });
+              alert('Đơn hàng của bạn đã được đặt!');
+              // Reset cart after checkout
+              cart = [];
+              updateCart();
+          } catch (error) {
+              console.error('Error adding document: ', error);
+          }
+      }
+
+      function callService() {
+          alert('Nhân viên sẽ đến bàn của bạn ngay lập tức.');
+      }
+
+      function callPayment() {
+          alert('Nhân viên sẽ đến để thanh toán cho bạn.');
+      }
+
+      async function viewHistory() {
+          const q = query(collection(db, 'orders'), where('table', '==', 1), orderBy('time', 'desc'));
+          const querySnapshot = await getDocs(q);
+          let historyDetails = querySnapshot.docs.map((doc, index) => {
+              const data = doc.data();
+              return `
+                  <div>
+                      <strong>Đơn hàng ${index + 1} - ${data.time.toDate().toLocaleString()}</strong>
+                      <div>${data.order.map(item => `${item.item} (${item.quantity}): ${item.price * item.quantity} VND`).join('<br>')}</div>
+                      <div><strong>Tổng: ${data.total} VND</strong></div>
+                  </div>
+                  <hr>
+              `;
+          }).join('');
+          historyDetails = historyDetails || '<div>Không có lịch sử đặt món</div>';
+          const historyWindow = window.open("", "Lịch Sử Đặt Món", "width=600,height=400");
+          historyWindow.document.write(`<html><head><title>Lịch Sử Đặt Món</title></head><body>${historyDetails}</body></html>`);
+      }
+
+      window.onload = updateCart;
+    </script>
+</body>
+</html>
